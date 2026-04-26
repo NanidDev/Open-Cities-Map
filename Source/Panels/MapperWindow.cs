@@ -38,6 +38,10 @@ namespace Mapper
         UILabel majorRoadsLabel;
         UICustomCheckbox3 minorRoadsCheck;
         UILabel minorRoadsLabel;
+        UICustomCheckbox3 residentialCheck;
+        UILabel residentialLabel;
+        UICustomCheckbox3 serviceCheck;
+        UILabel serviceLabel;
         UICustomCheckbox3 railCheck;
         UILabel railLabel;
         UICustomCheckbox3 pedestrianCheck;
@@ -51,7 +55,7 @@ namespace Mapper
         int frameCooldown;
 
         const int DenseBatchSize = 10;
-        const int DenseFrameGap  = 30;
+        const int DenseFrameGap  = 5;
 
         public override void Awake()
         {
@@ -87,6 +91,10 @@ namespace Mapper
             majorRoadsLabel = AddUIComponent<UILabel>();
             minorRoadsCheck = AddUIComponent<UICustomCheckbox3>();
             minorRoadsLabel = AddUIComponent<UILabel>();
+            residentialCheck = AddUIComponent<UICustomCheckbox3>();
+            residentialLabel = AddUIComponent<UILabel>();
+            serviceCheck = AddUIComponent<UICustomCheckbox3>();
+            serviceLabel = AddUIComponent<UILabel>();
             railCheck = AddUIComponent<UICustomCheckbox3>();
             railLabel = AddUIComponent<UILabel>();
             pedestrianCheck = AddUIComponent<UICustomCheckbox3>();
@@ -154,8 +162,11 @@ namespace Mapper
             SetCheckbox(majorRoadsCheck, majorRoadsLabel, "Major Roads", x + 155, y);
             SetCheckbox(minorRoadsCheck, minorRoadsLabel, "Minor Roads", x + 310, y);
             y += vertPadding - 2;
-            SetCheckbox(railCheck,       railLabel,       "Rail",        x,       y);
-            SetCheckbox(pedestrianCheck, pedestrianLabel2,"Pedestrian",  x + 155, y);
+            SetCheckbox(residentialCheck, residentialLabel, "Residential", x,       y);
+            SetCheckbox(serviceCheck,     serviceLabel,     "Service",     x + 155, y);
+            SetCheckbox(pedestrianCheck,  pedestrianLabel2, "Pedestrian",  x + 310, y);
+            y += vertPadding - 2;
+            SetCheckbox(railCheck,        railLabel,        "Rail",        x,       y);
             y += vertPadding + 5;
 
             SetButton(okButton, "Make Roads", y);
@@ -306,8 +317,14 @@ namespace Mapper
                 case RoadTypes.OnewayRoadDecorationGrass:
                 case RoadTypes.OnewayRoadElevated:
                 case RoadTypes.OnewayRoadBridge:
-                case RoadTypes.GravelRoad:
                     return minorRoadsCheck.IsChecked;
+
+                case RoadTypes.ResidentialRoad:
+                    return residentialCheck.IsChecked;
+
+                case RoadTypes.ServiceRoad:
+                case RoadTypes.GravelRoad:
+                    return serviceCheck.IsChecked;
 
                 case RoadTypes.TrainTrack:
                 case RoadTypes.TrainTrackBridge:
@@ -369,6 +386,8 @@ namespace Mapper
                 case RoadTypes.OnewayRoadElevated:
                 case RoadTypes.OnewayRoadBridge:
                 case RoadTypes.GravelRoad:
+                case RoadTypes.ResidentialRoad:
+                case RoadTypes.ServiceRoad:
                     return true;
                 default:
                     return false;

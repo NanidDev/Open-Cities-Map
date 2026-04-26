@@ -31,7 +31,12 @@ namespace Mapper
                         netInfos.Add((RoadTypes)Enum.Parse(typeof(RoadTypes), pp.name.Replace(" ", "")), pp);
                     }
                 }
-                
+            }
+
+            if (netInfos.ContainsKey(RoadTypes.BasicRoad))
+            {
+                netInfos[RoadTypes.ResidentialRoad] = netInfos[RoadTypes.BasicRoad];
+                netInfos[RoadTypes.ServiceRoad]     = netInfos[RoadTypes.BasicRoad];
             }
         }
 
@@ -74,6 +79,11 @@ namespace Mapper
 
             }
             if (!osm.nodes.ContainsKey(way.StartNode) || !osm.nodes.ContainsKey(way.EndNode))
+            {
+                yield break;
+            }
+
+            if (way.segments == null || way.segments.Count == 0)
             {
                 yield break;
             }

@@ -46,6 +46,8 @@ namespace Mapper
         LargeRoadBridge,
         LargeRoadElevated,
         GravelRoad,
+        ResidentialRoad,
+        ServiceRoad,
 
         TrainTrack,
         TrainTrackBridge,
@@ -97,12 +99,12 @@ namespace Mapper
             roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "secondary_link"), RoadTypes.OnewayRoad);
             roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "tertiary"), RoadTypes.BasicRoad);
             roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "tertiary_link"), RoadTypes.OnewayRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "unclassified"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "residential"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "living_street"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "service"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "road"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "track"), RoadTypes.GravelRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "unclassified"), RoadTypes.ResidentialRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "residential"), RoadTypes.ResidentialRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "living_street"), RoadTypes.ResidentialRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "road"), RoadTypes.ResidentialRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "service"), RoadTypes.ServiceRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "track"), RoadTypes.ServiceRoad);
             // Only pedestrianised streets (town centre carriageways closed to cars).
             // footway/steps/bridleway/cycleway are pavements and cycle lanes alongside
             // roads — they bloat the import and eat node budget with no useful output.
@@ -341,7 +343,10 @@ namespace Mapper
                 case RoadTypes.Highway:
                     return RoadTypes.Highway;
                 case RoadTypes.GravelRoad:
+                case RoadTypes.ServiceRoad:
                     return RoadTypes.OnewayRoad;
+                case RoadTypes.ResidentialRoad:
+                    return RoadTypes.ResidentialRoad;
                 case RoadTypes.HighwayRamp:
                     return RoadTypes.HighwayRamp;
                 case RoadTypes.LargeOneway:
