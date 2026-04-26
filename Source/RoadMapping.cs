@@ -51,6 +51,9 @@ namespace Mapper
         TrainTrackBridge,
         TrainTrackElevated,
         TrainConnectionTrack,
+        TrainOnewayTrack,
+        TrainOnewayTrackBridge,
+        TrainOnewayTrackElevated,
         Highway,
         HighwayBridge,
         HighwayElevated,
@@ -82,34 +85,34 @@ namespace Mapper
         {
             maxBounds = tiles * 1920;
             roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "motorway"), RoadTypes.Highway);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "trunk"), RoadTypes.LargeRoadDecorationGrass);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "primary"), RoadTypes.MediumRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "secondary"), RoadTypes.MediumRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "tertiary"), RoadTypes.MediumRoadDecorationGrass);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "unclassified"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "bus_guideway"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "road"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "residential"), RoadTypes.BasicRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "service"), RoadTypes.GravelRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "living_street"), RoadTypes.GravelRoad);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "track"), RoadTypes.GravelRoad);
             roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "motorway_link"), RoadTypes.HighwayRamp);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "trunk_link"), RoadTypes.HighwayRamp);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "primary_link"), RoadTypes.HighwayRamp);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "secondary_link"), RoadTypes.HighwayRamp);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "tertiary_link"), RoadTypes.HighwayRamp);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "raceway"), RoadTypes.HighwayRamp);
+            // trunk = signed A-road (can be dual carriageway) → medium 4-lane
+            // primary = normal A-road (2-lane, one each way) → basic 2-lane
+            // everything below primary → basic 2-lane
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "trunk"), RoadTypes.MediumRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "trunk_link"), RoadTypes.OnewayRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "primary"), RoadTypes.BasicRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "primary_link"), RoadTypes.OnewayRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "secondary"), RoadTypes.BasicRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "secondary_link"), RoadTypes.OnewayRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "tertiary"), RoadTypes.BasicRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "tertiary_link"), RoadTypes.OnewayRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "unclassified"), RoadTypes.BasicRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "residential"), RoadTypes.BasicRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "living_street"), RoadTypes.BasicRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "service"), RoadTypes.BasicRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "road"), RoadTypes.BasicRoad);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "track"), RoadTypes.GravelRoad);
+            // Only pedestrianised streets (town centre carriageways closed to cars).
+            // footway/steps/bridleway/cycleway are pavements and cycle lanes alongside
+            // roads — they bloat the import and eat node budget with no useful output.
             roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "pedestrian"), RoadTypes.PedestrianPavement);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "footway"), RoadTypes.PedestrianPavement);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "steps"), RoadTypes.PedestrianPavement);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "bridleway"), RoadTypes.PedestrianPavement);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("highway", "cycleway"), RoadTypes.PedestrianPavement);
 
-            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "miniature"), RoadTypes.TrainTrack);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "monorail"), RoadTypes.TrainTrack);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "narrow_gauge"), RoadTypes.TrainTrack);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "preserved"), RoadTypes.TrainTrack);
-            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "rail"), RoadTypes.TrainTrack);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "miniature"), RoadTypes.TrainOnewayTrack);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "monorail"), RoadTypes.TrainOnewayTrack);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "narrow_gauge"), RoadTypes.TrainOnewayTrack);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "preserved"), RoadTypes.TrainOnewayTrack);
+            roadTypeMapping.Add(new KeyValuePair<string, string>("railway", "rail"), RoadTypes.TrainOnewayTrack);
 
             reverseMapping.Add(RoadTypes.TrainConnectionTrack, new KeyValuePair<string, string>("railway", "rail"));
             reverseMapping.Add(RoadTypes.TrainTrack,new KeyValuePair<string, string>("railway", "rail"));
@@ -210,12 +213,13 @@ namespace Mapper
                         invert = true;
                     }
                 }
-                else if(tag.k.Trim().ToLower() =="bridge"){
-                    layer = Math.Max(layer, 1);
-                }
-                else if (tag.k.Trim().ToLower() == "layer")
+                else if (tag.k.Trim().ToLower() == "bridge" && tag.v.Trim().ToLower() != "no")
                 {
-                    int.TryParse(tag.v.Trim(), out layer);
+                    // Only bridge=yes (or any truthy value) means physically elevated.
+                    // The OSM `layer` tag is a rendering hint only and must not be used
+                    // for elevation — it causes ground-level roads at crossings to appear
+                    // raised by 11 game units for no reason.
+                    layer = Math.Max(layer, 1);
                 }
                 else if (tag.k.Trim().ToLower() == "surface")
                 {
@@ -333,9 +337,7 @@ namespace Mapper
                 case RoadTypes.MediumRoadDecorationGrass:
                 case RoadTypes.BasicRoadDecorationGrass:
                     return RoadTypes.OnewayRoadDecorationGrass;
-                case RoadTypes.LargeRoad:                    
-                case RoadTypes.LargeRoadDecorationGrass:
-                case RoadTypes.LargeRoadDecorationTrees:
+                case RoadTypes.LargeRoad:
                 case RoadTypes.Highway:
                     return RoadTypes.Highway;
                 case RoadTypes.GravelRoad:
@@ -344,6 +346,11 @@ namespace Mapper
                     return RoadTypes.HighwayRamp;
                 case RoadTypes.LargeOneway:
                     return RoadTypes.LargeOneway;
+                case RoadTypes.TrainTrack:
+                case RoadTypes.TrainConnectionTrack:
+                case RoadTypes.TrainOnewayTrack:
+                case RoadTypes.TrainCargoTrack:
+                    return rt;
             }
             return RoadTypes.None;
         }

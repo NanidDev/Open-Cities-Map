@@ -36,15 +36,14 @@ namespace Mapper
         }
 
 
-        public IEnumerator MakeRoad(int p)
+        public IEnumerator MakeRoad(Way way)
         {
             var nm = Singleton<NetManager>.instance;
 
             if (! nm.CheckLimits())
             {
-                yield return null;
+                yield break;
             }
-            var way = osm.ways.ElementAt(p);
             NetInfo ni = null;
 
             if (way.roadTypes == RoadTypes.None)
@@ -59,12 +58,12 @@ namespace Mapper
             else
             {
                 Debug.Log("Failed to find net info: " + way.roadTypes.ToString());
-                yield return null;
+                yield break;
             }
             float elevation = way.layer;
             if (elevation < 0)
             {
-                yield return null;
+                yield break;
             }
             else if (elevation > 0)
             {
@@ -76,7 +75,7 @@ namespace Mapper
             }
             if (!osm.nodes.ContainsKey(way.StartNode) || !osm.nodes.ContainsKey(way.EndNode))
             {
-                yield return null;
+                yield break;
             }
 
             ushort startNode;
@@ -159,7 +158,7 @@ namespace Mapper
             var nm = Singleton<NetManager>.instance;
             var node = nm.m_nodes.m_buffer[startNode];
             var ele = (byte)Mathf.Clamp(Mathf.RoundToInt(Math.Max(node.m_elevation, elevation)), 0, 255);
-            var terrain = Singleton<TerrainManager>.instance.SampleRawHeightSmoothWithWater(node.m_position, false, 0f);
+            var terrain = Singleton<TerrainManager>.instance.SampleRawHeightSmooth(node.m_position);
             node.m_elevation = ele;
             node.m_position = new Vector3(node.m_position.x, ele + terrain, node.m_position.z);
             if (elevation < 11f)
@@ -169,15 +168,6 @@ namespace Mapper
             else
             {
                 node.m_flags &= ~NetNode.Flags.OnGround;
-                UpdateSegment(node.m_segment0,elevation);
-                UpdateSegment(node.m_segment1, elevation);
-                UpdateSegment(node.m_segment2, elevation);
-                UpdateSegment(node.m_segment3, elevation);
-                UpdateSegment(node.m_segment4, elevation);
-                UpdateSegment(node.m_segment5, elevation);
-                UpdateSegment(node.m_segment6, elevation);
-                UpdateSegment(node.m_segment7, elevation);
-                
             }
             nm.m_nodes.m_buffer[startNode] = node;
             //Singleton<NetManager>.instance.UpdateNode(startNode);
@@ -200,7 +190,7 @@ namespace Mapper
         private void CreateNode(out ushort startNode, ref Randomizer rand, NetInfo netInfo, Vector2 oldPos, float elevation)
         {
             var pos = new Vector3(oldPos.x, elevation, oldPos.y);
-            pos.y = Singleton<TerrainManager>.instance.SampleRawHeightSmoothWithWater(pos,false,0f);
+            pos.y = Singleton<TerrainManager>.instance.SampleRawHeightSmooth(pos);
             var nm = Singleton<NetManager>.instance;
             nm.CreateNode(out startNode, ref rand, netInfo, pos, Singleton<SimulationManager>.instance.m_currentBuildIndex);
             Singleton<SimulationManager>.instance.m_currentBuildIndex += 1u;

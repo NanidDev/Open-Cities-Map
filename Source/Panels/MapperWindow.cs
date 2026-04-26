@@ -32,10 +32,26 @@ namespace Mapper
 
         UIButton okButton;
 
+        UICustomCheckbox3 motorwaysCheck;
+        UILabel motorwaysLabel;
+        UICustomCheckbox3 majorRoadsCheck;
+        UILabel majorRoadsLabel;
+        UICustomCheckbox3 minorRoadsCheck;
+        UILabel minorRoadsLabel;
+        UICustomCheckbox3 railCheck;
+        UILabel railLabel;
+        UICustomCheckbox3 pedestrianCheck;
+        UILabel pedestrianLabel2;
+
         public ICities.LoadMode mode;
         RoadMaker2 roadMaker;
         bool createRoads;
-        int currentIndex;
+        Way[] runWays;
+        int runIndex;
+        int frameCooldown;
+
+        const int DenseBatchSize = 10;
+        const int DenseFrameGap  = 30;
 
         public override void Awake()
         {
@@ -64,6 +80,17 @@ namespace Mapper
             tilesLabel = AddUIComponent<UILabel>();
 
             errorLabel = AddUIComponent<UILabel>();
+
+            motorwaysCheck = AddUIComponent<UICustomCheckbox3>();
+            motorwaysLabel = AddUIComponent<UILabel>();
+            majorRoadsCheck = AddUIComponent<UICustomCheckbox3>();
+            majorRoadsLabel = AddUIComponent<UILabel>();
+            minorRoadsCheck = AddUIComponent<UICustomCheckbox3>();
+            minorRoadsLabel = AddUIComponent<UILabel>();
+            railCheck = AddUIComponent<UICustomCheckbox3>();
+            railLabel = AddUIComponent<UILabel>();
+            pedestrianCheck = AddUIComponent<UICustomCheckbox3>();
+            pedestrianLabel2 = AddUIComponent<UILabel>();
 
             okButton = AddUIComponent<UIButton>();
 
@@ -109,7 +136,7 @@ namespace Mapper
             y += vertPadding;
 
             SetLabel(tilesLabel, "Tiles to Boundary", x, y);
-            SetTextBox(tiles, "2.5", x + 120, y);
+            SetTextBox(tiles, "4.5", x + 120, y);
             y += vertPadding + 12;
 
             SetLabel(pathTextBoxLabel, "Path", x, y);
@@ -122,6 +149,14 @@ namespace Mapper
             SetLabel(errorLabel, "No OSM data loaded.", x, y);
             errorLabel.textScale = 0.6f;
             y += vertPadding + 12;
+
+            SetCheckbox(motorwaysCheck,  motorwaysLabel,  "Motorways",   x,       y);
+            SetCheckbox(majorRoadsCheck, majorRoadsLabel, "Major Roads", x + 155, y);
+            SetCheckbox(minorRoadsCheck, minorRoadsLabel, "Minor Roads", x + 310, y);
+            y += vertPadding - 2;
+            SetCheckbox(railCheck,       railLabel,       "Rail",        x,       y);
+            SetCheckbox(pedestrianCheck, pedestrianLabel2,"Pedestrian",  x + 155, y);
+            y += vertPadding + 5;
 
             SetButton(okButton, "Make Roads", y);
             okButton.eventClick += OkButton_eventClick;
@@ -146,8 +181,9 @@ namespace Mapper
             }
             try
             {
-                var osm = new OSMInterface(pathTextBox.text.Trim(), double.Parse(scaleTextBox.text.Trim()), double.Parse(tolerance.text.Trim()), double.Parse(curveTolerance.text.Trim()), double.Parse(tiles.text.Trim()));
-                currentIndex = 0;
+                var osm = new OSMInterface(path, double.Parse(scaleTextBox.text.Trim()), double.Parse(tolerance.text.Trim()), double.Parse(curveTolerance.text.Trim()), double.Parse(tiles.text.Trim()));
+                runWays = null;
+                runIndex = 0;
                 roadMaker = new RoadMaker2(osm);
                 errorLabel.text = "File Loaded.";
                 okButton.Enable();
@@ -186,20 +222,16 @@ namespace Mapper
 
         }
 
-        private void SetCheckBox(UICustomCheckbox3 pedestriansCheck, int x, int y)
+        private void SetCheckbox(UICustomCheckbox3 cb, UILabel label, string text, int x, int y)
         {
-
-            pedestriansCheck.IsChecked = true;
-            pedestriansCheck.relativePosition = new Vector3(x, y);
-            pedestriansCheck.size = new Vector2(13, 13);
-            pedestriansCheck.Show();
-            pedestriansCheck.color = new Color32(185, 221, 254, 255);
-            pedestriansCheck.enabled = true;            
-            pedestriansCheck.spriteName = "AchievementCheckedFalse";
-            pedestriansCheck.eventClick += (component, param) =>
-            {
-                pedestriansCheck.IsChecked = !pedestriansCheck.IsChecked;
-            };
+            cb.size = new Vector2(16, 16);
+            cb.relativePosition = new Vector3(x, y + 2);
+            cb.IsChecked = false;
+            cb.eventClick += (c, p) => { cb.IsChecked = !cb.IsChecked; };
+            label.text = text;
+            label.textScale = 0.8f;
+            label.size = new Vector2(130, 20);
+            label.relativePosition = new Vector3(x + 20, y);
         }
 
         private void SetTextBox(UITextField scaleTextBox, string p, int x, int y)
@@ -235,33 +267,147 @@ namespace Mapper
             pedestrianLabel.size = new Vector3(120,20);
         }
 
+        private bool IsRoadTypeEnabled(RoadTypes rt)
+        {
+            switch (rt)
+            {
+                case RoadTypes.Highway:
+                case RoadTypes.HighwayBridge:
+                case RoadTypes.HighwayElevated:
+                case RoadTypes.HighwayRamp:
+                case RoadTypes.HighwayRampElevated:
+                case RoadTypes.HighwayBarrier:
+                    return motorwaysCheck.IsChecked;
+
+                case RoadTypes.LargeRoad:
+                case RoadTypes.LargeRoadDecorationGrass:
+                case RoadTypes.LargeRoadDecorationTrees:
+                case RoadTypes.LargeRoadBridge:
+                case RoadTypes.LargeRoadElevated:
+                case RoadTypes.LargeOneway:
+                case RoadTypes.LargeOnewayDecorationGrass:
+                case RoadTypes.LargeOnewayDecorationTrees:
+                case RoadTypes.LargeOnewayBridge:
+                case RoadTypes.LargeOnewayElevated:
+                case RoadTypes.MediumRoad:
+                case RoadTypes.MediumRoadDecorationGrass:
+                case RoadTypes.MediumRoadDecorationTrees:
+                case RoadTypes.MediumRoadBridge:
+                case RoadTypes.MediumRoadElevated:
+                    return majorRoadsCheck.IsChecked;
+
+                case RoadTypes.BasicRoad:
+                case RoadTypes.BasicRoadDecorationTrees:
+                case RoadTypes.BasicRoadDecorationGrass:
+                case RoadTypes.BasicRoadBridge:
+                case RoadTypes.BasicRoadElevated:
+                case RoadTypes.OnewayRoad:
+                case RoadTypes.OnewayRoadDecorationTrees:
+                case RoadTypes.OnewayRoadDecorationGrass:
+                case RoadTypes.OnewayRoadElevated:
+                case RoadTypes.OnewayRoadBridge:
+                case RoadTypes.GravelRoad:
+                    return minorRoadsCheck.IsChecked;
+
+                case RoadTypes.TrainTrack:
+                case RoadTypes.TrainTrackBridge:
+                case RoadTypes.TrainTrackElevated:
+                case RoadTypes.TrainConnectionTrack:
+                case RoadTypes.TrainOnewayTrack:
+                case RoadTypes.TrainOnewayTrackBridge:
+                case RoadTypes.TrainOnewayTrackElevated:
+                case RoadTypes.TrainCargoTrack:
+                case RoadTypes.MetroTrack:
+                case RoadTypes.BusLine:
+                case RoadTypes.MetroLine:
+                case RoadTypes.TrainLine:
+                case RoadTypes.AirplaneTaxiway:
+                case RoadTypes.Dam:
+                    return railCheck.IsChecked;
+
+                case RoadTypes.PedestrianGravel:
+                case RoadTypes.PedestrianPavement:
+                case RoadTypes.PedestrianElevated:
+                    return pedestrianCheck.IsChecked;
+
+                default:
+                    return false;
+            }
+        }
+
         private void OkButton_eventClick(UIComponent component, UIMouseEventParameter eventParam)
         {
             if (roadMaker != null)
             {
+                if (!createRoads)
+                {
+                    var filtered = new System.Collections.Generic.List<Way>();
+                    foreach (var way in roadMaker.osm.ways)
+                    {
+                        if (IsRoadTypeEnabled(way.roadTypes))
+                            filtered.Add(way);
+                    }
+                    runWays = filtered.ToArray();
+                    runIndex = 0;
+                }
                 createRoads = !createRoads;
+            }
+        }
+
+        private static bool IsDenseRoadType(RoadTypes rt)
+        {
+            switch (rt)
+            {
+                case RoadTypes.BasicRoad:
+                case RoadTypes.BasicRoadDecorationTrees:
+                case RoadTypes.BasicRoadDecorationGrass:
+                case RoadTypes.BasicRoadBridge:
+                case RoadTypes.BasicRoadElevated:
+                case RoadTypes.OnewayRoad:
+                case RoadTypes.OnewayRoadDecorationTrees:
+                case RoadTypes.OnewayRoadDecorationGrass:
+                case RoadTypes.OnewayRoadElevated:
+                case RoadTypes.OnewayRoadBridge:
+                case RoadTypes.GravelRoad:
+                    return true;
+                default:
+                    return false;
             }
         }
 
         public override void Update()
         {
-            if (createRoads)
+            if (createRoads && runWays != null)
             {
-
-                if (currentIndex < roadMaker.osm.ways.Count())
+                if (runIndex < runWays.Length)
                 {
-                    //roadMaker.MakeRoad(currentIndex);
-                    SimulationManager.instance.AddAction(roadMaker.MakeRoad(currentIndex));
-                    currentIndex += 1;
-                    var instance = Singleton<NetManager>.instance;
-                    errorLabel.text = String.Format("Making road {0} out of {1}. Nodes: {2}. Segments: {3}", currentIndex, roadMaker.osm.ways.Count(), instance.m_nodeCount, instance.m_segmentCount);
-                }
-            }
+                    if (frameCooldown > 0)
+                    {
+                        frameCooldown--;
+                    }
+                    else
+                    {
+                        bool dense = IsDenseRoadType(runWays[runIndex].roadTypes);
+                        int count = dense ? DenseBatchSize : 1;
+                        for (int i = 0; i < count && runIndex < runWays.Length; i++)
+                        {
+                            SimulationManager.instance.AddAction(roadMaker.MakeRoad(runWays[runIndex]));
+                            runIndex++;
+                        }
+                        if (dense)
+                            frameCooldown = DenseFrameGap;
+                    }
 
-            if (roadMaker != null && currentIndex == roadMaker.osm.ways.Count())
-            {
-                errorLabel.text = "Done.";
-                createRoads = false;
+                    var nm = Singleton<NetManager>.instance;
+                    errorLabel.text = String.Format("{0}/{1} — Nodes: {2}/32768  Segs: {3}/36864",
+                        runIndex, runWays.Length,
+                        nm.m_nodeCount, nm.m_segmentCount);
+                }
+                else
+                {
+                    errorLabel.text = "Done.";
+                    createRoads = false;
+                }
             }
             base.Update();
         }
@@ -274,8 +420,16 @@ namespace Mapper
         public override void Start()
         {
             base.Start();
-            IsChecked = true;
-            spriteName = "AchievementCheckedTrue";
+            IsChecked = false;
+            foreach (var a in Resources.FindObjectsOfTypeAll<UITextureAtlas>())
+            {
+                if (a["AchievementCheckedTrue"] != null)
+                {
+                    atlas = a;
+                    break;
+                }
+            }
+            spriteName = "AchievementCheckedFalse";
         }
 
         public override void Update()
@@ -283,5 +437,6 @@ namespace Mapper
             base.Update();
             spriteName = IsChecked ? "AchievementCheckedTrue" : "AchievementCheckedFalse";
         }
-    }    
+    }
+
 }

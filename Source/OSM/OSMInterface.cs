@@ -1,4 +1,5 @@
 ﻿using Mapper.Curves;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -37,19 +38,34 @@ namespace Mapper.OSM
 
         private void Init(osm osm, double scale)
         {
+            if (osm.bounds == null)
+            {
+                throw new Exception("OSM file has no <bounds> element. Export with a bounding box included.");
+            }
+
             mapping.InitBoundingBox(osm.bounds, scale);
 
-            foreach (var node in osm.node)
+            if (osm.node != null)
             {
-                if (!nodes.ContainsKey(node.id) && node.lat != 0 && node.lon != 0)
+                foreach (var node in osm.node)
                 {
-                    Vector2 pos = Vector2.zero;
-                    if (mapping.GetPos(node.lon, node.lat, ref pos))
+                    if (!nodes.ContainsKey(node.id) && node.lat != 0 && node.lon != 0)
                     {
-                        nodes.Add(node.id, pos);
+                        Vector2 pos = Vector2.zero;
+                        if (mapping.GetPos(node.lon, node.lat, ref pos))
+                        {
+                            nodes.Add(node.id, pos);
+                        }
                     }
                 }
             }
+
+            if (osm.way == null)
+            {
+                return;
+            }
+
+            var seenWaySignatures = new HashSet<string>();
 
             foreach (var way in osm.way.OrderBy(c => c.changeset))
             {
@@ -71,7 +87,12 @@ namespace Mapper.OSM
                         {
                             if (currentList.Count() > 1 || currentList.Contains(pp))
                             {
-                                ways.AddLast(new Way(currentList, rt, layer));
+                                var sig = rt + "|" + string.Join(",", currentList.OrderBy(n => n).Select(n => n.ToString()).ToArray());
+                                if (!seenWaySignatures.Contains(sig))
+                                {
+                                    seenWaySignatures.Add(sig);
+                                    ways.AddLast(new Way(currentList, rt, layer));
+                                }
                                 currentList = new List<long>();
                             }
                         }
@@ -79,7 +100,12 @@ namespace Mapper.OSM
                     }
                     if (currentList.Count() > 1)
                     {
-                        ways.AddLast(new Way(currentList, rt, layer));
+                        var sig = rt + "|" + string.Join(",", currentList.OrderBy(n => n).Select(n => n.ToString()).ToArray());
+                        if (!seenWaySignatures.Contains(sig))
+                        {
+                            seenWaySignatures.Add(sig);
+                            ways.AddLast(new Way(currentList, rt, layer));
+                        }
                     }
                 }
             }
@@ -208,8 +234,8 @@ namespace Mapper.OSM
                 {
                     newList.AddLast(way);
                 }
-                this.ways = newList;
             }
+            this.ways = newList;
         }
 
 
